@@ -16,10 +16,13 @@ The third number identifies emergency releases from older branches.
 <!-- changelog follows -->
 
 
-## [Unreleased](https://github.com/hynek/bgt/tree/main)
+## [Unreleased](https://github.com/hynek/bgt/)
 
 ### Added
 
 - Initial public release.
   It is the supervision layer from [*pgbg*](https://github.com/hynek/pgbg) to allow using it without a PostgreSQL database.
   The Prometheus metrics and the *structlog* logger are named `bgt` instead of `pgbg`.
+
+
+## pls ignore -- necessary for fancy readme on first release
