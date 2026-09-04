@@ -21,12 +21,5 @@ The third number identifies emergency releases from older branches.
 ### Added
 
 - Initial public release.
-  The supervision layer was extracted from [*pgbg*](https://github.com/hynek/pgbg) 26.1.0:
-  `bgt.Supervisor`, `bgt.Service`, `bgt.SupervisedService`, `bgt.IntervalOnlyWakeup`, `bgt.as_work_factory`, `bgt.exceptions.SuppressedCrashError`, and the protocols in `bgt.typing`.
+  It is the supervision layer from [*pgbg*](https://github.com/hynek/pgbg) to allow using it without a PostgreSQL database.
   The Prometheus metrics and the *structlog* logger are named `bgt` instead of `pgbg`.
-
-
-## Prehistory
-
-Before *bgt* existed, this code shipped as part of *pgbg*.
-See [its changelog](https://github.com/hynek/pgbg/blob/main/CHANGELOG.md) for the time before the split.
