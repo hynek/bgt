@@ -16,7 +16,7 @@ The third number identifies emergency releases from older branches.
 <!-- changelog follows -->
 
 
-## [Unreleased](https://github.com/hynek/bgt/)
+## [26.1.0](https://github.com/hynek/bgt/tree/26.1.0) - 2026-09-04
 
 ### Added
 
