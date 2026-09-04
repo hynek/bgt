@@ -190,7 +190,8 @@ include = ["tests", "conftest.py"]
 
 
 [tool.pyright]
-ignore = ["tests", "conftest.py"]
+# site/ is the docs build output and carries copies of the examples.
+ignore = ["tests", "conftest.py", "site"]
 
 
 [tool.pyrefly]
