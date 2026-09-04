@@ -1,7 +1,7 @@
 <!-- --8<-- [start:header] -->
 # *bgt*
 
-*Supervised background threads for Python*
+*Fault-tolerant background threads for Python*
 <!-- --8<-- [end:header] -->
 
 [![Documentation at ReadTheDocs](https://img.shields.io/badge/Docs-Read%20Them!-black)](https://bgt.hynek.me)

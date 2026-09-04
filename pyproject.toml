@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 [project]
 dynamic = ["version", "readme"]
 name = "bgt"
-description = "Supervised background threads for Python"
+description = "Fault-tolerant background threads for Python"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Hynek Schlawack", email = "hs@ox.cx" }]
