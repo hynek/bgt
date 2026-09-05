@@ -1,7 +1,7 @@
 <!-- --8<-- [start:header] -->
 # *bgt*
 
-*Fault-tolerant background threads for Python*
+_Fault-tolerant **b**ack**g**round **t**hreads for Python_
 <!-- --8<-- [end:header] -->
 
 [![Documentation at ReadTheDocs](https://img.shields.io/badge/Docs-Read%20Them!-black)](https://bgt.hynek.me)
@@ -47,9 +47,9 @@ import bgt
 
 
 def do_work() -> bool:
-    ...  # one bounded work unit
+    ...  # one bounded work unit; if it crashes, it doesn't crash the loop
 
-    return False  # nothing left to do: wait for the next wakeup
+    return False  # False = wait for next wakeup; True = run again immediately
 
 
 with bgt.SupervisedService.start(
