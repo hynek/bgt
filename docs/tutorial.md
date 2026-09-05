@@ -33,6 +33,8 @@ This demonstrates two features:
 
 It's easy to get excited by fault-tolerance, but the second feature only becomes important once your work units have to stay short, for example for prompt shutdowns (see [thread cancellation](services.md#thread-cancellation)).
 
+--8<-- "includes/thread-loop-tip.md"
+
 
 ## Crash better
 

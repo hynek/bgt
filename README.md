@@ -11,13 +11,13 @@ _Fault-tolerant **b**ack**g**round **t**hreads for Python_
 
 
 <!-- --8<-- [start:spiel] -->
-POV: you want a framework-agnostic way to reliably run a plain[^non-async] function or method in the background, repeatedly, but not all the time.
+POV: you want a framework-agnostic way to reliably run a plain[^non-async] function or method in the background, continuously or with pauses between work units.
 
 [^non-async]: As in: not `async`.
 
 *bgt* comes to the rescue with:
 
-- A **service** that runs your code in a loop and waits between work units.
+- A **service** that runs your code in a loop and optionally waits between work units.
   It wakes up on a fixed time interval, or as soon as something wakes it.
 
 - A **supervisor** that runs that loop in a **background thread**.
@@ -31,12 +31,12 @@ POV: you want a framework-agnostic way to reliably run a plain[^non-async] funct
 *bgt* is the engine underneath [*pgbg*](https://pgbg.hynek.me/), which adds PostgreSQL `LISTEN` / `NOTIFY`-driven wakeups and leader election with automatic failover on top.
 If your services should wake up on database events, or only one process at a time should do the work, that's where to look.
 
-Background services are **not** a worker queue.
+*bgt* is **not** a job queue like [Celery](https://docs.celeryq.dev/) or [RQ](https://python-rq.org).
 Common use cases include:
 
 - Periodic cleanup duties for expired caches or sessions.
-- Refreshing in-memory caches or configuration.
 - Flushing buffered metrics or events.
+- Processing a continuous stream of data in bounded batches.
 
 ---
 

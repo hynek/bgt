@@ -13,16 +13,7 @@ If the work unit returns `True`, it is run immediately again.
 This allows for **bounded runtimes** which are important for prompt shutdowns.
 Once the work unit indicates it is done, the service waits again.
 
-!!! tip
-    You might have seen constructions around [`threading.Event`][] like this:
-
-    ```python
-    while not stop_event.is_set():
-        do_work()
-    ```
-
-    You can get the same behavior by writing a `do_work()` that always returns `True`.
-    *bgt* checks for shutdown between calls, so your work unit does not need to manage a stop event.
+--8<-- "includes/thread-loop-tip.md"
 
 A service also takes an object that implements the [`Wakeup`][bgt.typing.Wakeup] protocol which allows for real-time wakeups in addition to the interval.
 *bgt* ships with [`IntervalOnlyWakeup`][bgt.IntervalOnlyWakeup] that has no external wake source, so the service wakes up on its interval alone.
