@@ -28,4 +28,4 @@ The third number identifies emergency releases from older branches.
   The Prometheus metrics and the *structlog* logger are named `bgt` instead of `pgbg`.
 
 
-## pls ignore -- necessary for fancy readme on first release
+## pls ignore -- necessary for fancy PyPI readme on first two releases
