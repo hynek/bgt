@@ -5,7 +5,7 @@ Structured log events go to the `bgt` logger via [*structlog*](https://www.struc
 
 ## Prometheus metrics
 
-*bgt* is thoroughly instrumented for the [Prometheus](https://prometheus.io) metrics and monitoring system.
+*bgt* is instrumented for the [Prometheus](https://prometheus.io) metrics and monitoring system.
 
 `bgt_supervisor_restarts_total{name}`
 :   Crashes that the supervisor restarted after.
