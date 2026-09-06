@@ -29,7 +29,7 @@ POV: you want a framework-agnostic way to reliably run a plain[^non-async] funct
 - Framework and platform independence.
 
 *bgt* is the engine underneath [*pgbg*](https://pgbg.hynek.me/), which adds PostgreSQL `LISTEN` / `NOTIFY`-driven wakeups and leader election with automatic failover on top.
-If your services should wake up on database events, or only one process at a time should do the work, that's where to look.
+If your services should wake up on database events, or only one process at a time should do the work, check it out!
 
 *bgt* is **not** a job queue like [Celery](https://docs.celeryq.dev/) or [RQ](https://python-rq.org).
 Common use cases include:
