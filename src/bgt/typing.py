@@ -136,6 +136,25 @@ class DoWork(Protocol):
         ...
 
 
+class DoAsyncWork(Protocol):
+    """
+    Async callable signature for a service's work.
+
+    Must do **one bounded async work unit** (for example, one batch) for responsive
+    shutdowns and accurate work-unit metrics.
+    """
+
+    async def __call__(self) -> bool:
+        """
+        Perform one bounded async work unit.
+
+        Returns:
+            `True` to be run immediately, or `False` to wait for the next
+                wakeup.
+        """
+        ...
+
+
 class WorkFactory(Protocol):
     """
     Factory for a loop run's work callable.
@@ -156,6 +175,8 @@ class WorkFactory(Protocol):
 
     [`as_work_factory`][bgt.as_work_factory] wraps a plain
     [`DoWork`][bgt.typing.DoWork] callable that needs no setup or cleanup.
+    [`as_async_work_factory`][bgt.as_async_work_factory] wraps an async
+    [`DoAsyncWork`][bgt.typing.DoAsyncWork] callable instead.
     """
 
     def __call__(self) -> AbstractContextManager[DoWork]:

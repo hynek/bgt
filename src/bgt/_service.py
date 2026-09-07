@@ -2,10 +2,13 @@
 Background service loops and the wakeup they wait on.
 """
 
+import asyncio
 import math
 import threading
 
-from contextlib import nullcontext
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager, nullcontext
+from functools import wraps
 from types import TracebackType
 from typing import Self
 
@@ -16,7 +19,7 @@ from prometheus_client import Gauge
 
 from ._supervisor import Supervisor
 from .exceptions import SuppressedCrashError
-from .typing import DoWork, Wakeup, WorkFactory
+from .typing import DoAsyncWork, DoWork, Wakeup, WorkFactory
 
 
 logger = structlog.stdlib.get_logger("bgt")
@@ -97,6 +100,39 @@ def as_work_factory(do_work: DoWork) -> WorkFactory:
         A factory that creates a context manager returning *do_work*.
     """
     return lambda: nullcontext(do_work)
+
+
+def as_async_work_factory(
+    do_async_work: DoAsyncWork,
+    *,
+    debug: bool | None = None,
+    loop_factory: Callable[[], asyncio.AbstractEventLoop] | None = None,
+) -> WorkFactory:
+    """
+    Wrap an async *do_work* callable into a
+    [`WorkFactory`][bgt.typing.WorkFactory] with no setup or cleanup.
+
+    Args:
+        do_async_work: An async callable that performs one bounded work unit.
+        debug: When true, the event loop will be run in debug mode.
+        loop_factory: When passed, it is used for new event loop creation.
+
+    Returns:
+        A factory that creates a context manager returning a plain callable
+            that runs one async work unit.
+    """
+
+    @contextmanager
+    def make_work() -> Iterator[DoWork]:
+        with asyncio.Runner(debug=debug, loop_factory=loop_factory) as runner:
+
+            @wraps(do_async_work)
+            def do_work() -> bool:
+                return runner.run(do_async_work())
+
+            yield do_work
+
+    return make_work
 
 
 @attrs.define
