@@ -1,3 +1,4 @@
+import inspect
 import threading
 
 from contextlib import contextmanager, suppress
@@ -7,12 +8,25 @@ import structlog
 
 from prometheus_client import REGISTRY
 
-from bgt import IntervalOnlyWakeup, Service, SupervisedService, as_work_factory
+from bgt import (
+    IntervalOnlyWakeup,
+    Service,
+    SupervisedService,
+    as_async_work_factory,
+    as_work_factory,
+)
 from bgt._service import SERVICE_LAST_WORK_UNIT
 from bgt.exceptions import SuppressedCrashError
 
 
 def noop_work():
+    """
+    Do nothing and report no further work.
+    """
+    return False
+
+
+async def noop_async_work():
     """
     Do nothing and report no further work.
     """
@@ -117,6 +131,34 @@ class TestService:
 
         assert 3 == len(calls)
 
+    def test_run_once_repeats_while_async_work_reports_more(self):
+        """
+        Async work units repeat while `do_work` returns True and stop when it
+        reports no further work.
+        """
+        calls = []
+
+        async def do_work():
+            """
+            Record the work unit and ask to run twice more.
+            """
+            calls.append(True)
+
+            return len(calls) < 3
+
+        work_factory = as_async_work_factory(do_work)
+        service = Service.build(
+            work_factory,
+            name="async",
+            wakeup=IntervalOnlyWakeup(),
+            interval=30,
+        )
+
+        with work_factory() as wrapped_do_work:
+            service._run_once(wrapped_do_work, threading.Event())
+
+        assert 3 == len(calls)
+
     def test_run_once_stops_between_units_when_stop_is_set(self):
         """
         Work stops between work units the moment the stop event is set, even
@@ -142,6 +184,37 @@ class TestService:
         stop.set()
 
         service._run_once(do_work, stop)
+
+        assert 1 == len(calls)
+
+    def test_run_once_stops_between_async_units_when_stop_is_set(self):
+        """
+        Async work stops between work units the moment the stop event is set,
+        even while `do_work` still reports more work.
+        """
+        calls = []
+
+        async def do_work():
+            """
+            Always report more work.
+            """
+            calls.append(True)
+
+            return True
+
+        work_factory = as_async_work_factory(do_work)
+        service = Service.build(
+            work_factory,
+            name="async-stop-between",
+            wakeup=IntervalOnlyWakeup(),
+            interval=30,
+        )
+
+        stop = threading.Event()
+        stop.set()
+
+        with work_factory() as wrapped_do_work:
+            service._run_once(wrapped_do_work, stop)
 
         assert 1 == len(calls)
 
@@ -395,6 +468,36 @@ class TestService:
             assert worked.wait(2)
             assert handle.is_running
 
+    def test_supervised_service_recovers_from_a_async_work_unit_error(self):
+        """
+        A transient error from async `do_work` is retried under supervision.
+        """
+        fail = True
+        worked = threading.Event()
+
+        async def do_work():
+            """
+            Fail once, then signal and stop.
+            """
+            nonlocal fail
+            if fail:
+                fail = False
+                raise RuntimeError("simulated transient do_work failure")
+
+            worked.set()
+
+            return False
+
+        with SupervisedService.start(
+            as_async_work_factory(do_work),
+            name="async-recovers",
+            wakeup=IntervalOnlyWakeup(),
+            interval=0.05,
+            initial_backoff=0.01,
+        ) as handle:
+            assert worked.wait(2)
+            assert handle.is_running
+
     def test_supervised_service_stops_out_of_a_long_interval(self):
         """
         Stopping wakes the service out of its interval wait instead of
@@ -436,6 +539,20 @@ class TestWorkFactory:
         with factory() as first, factory() as second:
             assert noop_work is first
             assert noop_work is second
+
+    def test_as_async_work_factory_wraps_the_async_callable(self):
+        """
+        The wrapped factory wraps the async callable itself, yields a plain callable,
+        and hands out a fresh context manager per call.
+        """
+        factory = as_async_work_factory(noop_async_work)
+
+        with factory() as first, factory() as second:
+            assert inspect.unwrap(first) is noop_async_work
+            assert inspect.unwrap(second) is noop_async_work
+
+            assert first() is False
+            assert second() is False
 
     def test_sets_up_and_cleans_up_around_a_run(self):
         """
