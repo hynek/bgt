@@ -28,11 +28,14 @@ POV: you want a framework-agnostic way to reliably run a plain[^non-async] funct
 
 - Framework and platform independence.
 
-*bgt* is the engine underneath [*django-bgt*](https://pypi.org/project/django-bgt/), which provides a `service` decorator and uses the Django ORM to orchestrate leader election and automatic failover in a database agnostic way.
+There are currently two packages built on top of *bgt*:
 
-There is also [*pgbg*](https://pgbg.hynek.me/), which adds PostgreSQL `LISTEN` / `NOTIFY`-driven wakeups and leader election with automatic failover on top.
+- [*pgbg*](https://pgbg.hynek.me/), which adds PostgreSQL `LISTEN` / `NOTIFY`-driven wakeups and leader election with automatic failover on top.
+  If your services should wake up on database events, or only one process at a time should do the work, check it out!
 
-If your services should wake up on database events, or only one process at a time should do the work, check it out!
+- [*django-bgt*](https://pypi.org/project/django-bgt/), which adapts *bgt* for Django.
+  It provides a `service` decorator for your work functions,
+  using the Django ORM to orchestrate leader election and automatic failover, while remaining database agnostic.
 
 *bgt* is **not** a job queue like [Celery](https://docs.celeryq.dev/) or [RQ](https://python-rq.org).
 Common use cases include:
