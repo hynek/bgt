@@ -34,8 +34,7 @@ There are currently two packages built on top of *bgt*:
   If your services should wake up on database events, or only one process at a time should do the work, check it out!
 
 - [*django-bgt*](https://pypi.org/project/django-bgt/), which adapts *bgt* for Django.
-  It provides a `service` decorator for your work functions,
-  using the Django ORM to orchestrate leader election and automatic failover, while remaining database agnostic.
+  It provides a `service` decorator for your work functions, using the Django ORM to orchestrate leader election and automatic failover, while remaining database agnostic.
 
 *bgt* is **not** a job queue like [Celery](https://docs.celeryq.dev/) or [RQ](https://python-rq.org).
 Common use cases include:
