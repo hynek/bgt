@@ -84,6 +84,7 @@ with bgt.SupervisedService.start(
     See [Getting Started](tutorial.md) for a complete, runnable example.
 
 If you don't need any setup or cleanup work, you can use [`as_work_factory(do_work)`][bgt.as_work_factory] to wrap a plain callable into a no-op factory.
+For async functions, use [`as_async_work_factory(do_work)`][bgt.as_async_work_factory] to wrap an async callable instead.
 
 
 ## Lifecycle

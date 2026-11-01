@@ -18,6 +18,10 @@ The third number identifies emergency releases from older branches.
 
 ## [Unreleased](https://github.com/hynek/bgt/compare/26.2.0...HEAD)
 
+### Added
+
+- `bgt.as_async_work_factory()` async adapter in support of async callables.
+
 
 ## [26.2.0](https://github.com/hynek/bgt/compare/26.1.0...26.2.0) - 2026-09-06
 

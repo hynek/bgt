@@ -11,6 +11,7 @@ Reach for these first:
         - SupervisedService
         - IntervalOnlyWakeup
         - as_work_factory
+        - as_async_work_factory
 
 
 ## Escape hatches

@@ -11,9 +11,7 @@ _Fault-tolerant **b**ack**g**round **t**hreads for Python_
 
 
 <!-- --8<-- [start:spiel] -->
-POV: you want a framework-agnostic way to reliably run a plain[^non-async] function or method in the background, continuously or with pauses between work units.
-
-[^non-async]: As in: not `async`.
+POV: you want a framework-agnostic way to reliably run a plain or async function or method in the background, continuously or with pauses between work units.
 
 *bgt* comes to the rescue with:
 
@@ -68,6 +66,7 @@ with bgt.SupervisedService.start(
 
 Return `True` from your work unit to be run again immediately.
 This keeps work units short, which makes shutdowns prompt.
+For async work units such as `async def do_work()` use `bgt.as_async_work_factory()` instead.
 <!-- --8<-- [end:spiel] -->
 
 Check out our [step-by-step tutorial](https://bgt.hynek.me/stable/tutorial/) to get an instant feel for the features!
