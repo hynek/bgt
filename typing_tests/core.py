@@ -1,6 +1,6 @@
 import threading
 
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from typing import assert_type
 
@@ -30,7 +30,7 @@ async_work_factory: WorkFactory = as_async_work_factory(async_work)
 
 
 @contextmanager
-def make_work() -> Iterator[DoWork]:
+def make_work() -> Generator[DoWork]:
     yield process_orders
 
 
