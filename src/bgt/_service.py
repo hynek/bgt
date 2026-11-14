@@ -130,7 +130,7 @@ def as_async_work_factory(
         If you need more control over the event loop's or the runner's
         lifecycle, create your own [`WorkFactory`][bgt.typing.WorkFactory]
         implementation. It's only a handful of lines of
-        [code](services.md#worker-factory).
+        [code](services.md#async).
 
     Args:
         do_async_work: An async callable that performs one bounded work unit.

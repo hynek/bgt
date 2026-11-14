@@ -468,9 +468,10 @@ class TestService:
             assert worked.wait(2)
             assert handle.is_running
 
-    def test_supervised_service_recovers_from_a_async_work_unit_error(self):
+    def test_supervised_service_recovers_from_an_async_work_unit_error(self):
         """
-        A transient error from async `do_work` is retried under supervision.
+        A transient error from an async `do_work` is retried under
+        supervision.
         """
         fail = True
         worked = threading.Event()

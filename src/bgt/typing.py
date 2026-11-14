@@ -140,8 +140,8 @@ class DoAsyncWork(Protocol):
     """
     Async callable signature for a service's work.
 
-    Must do **one bounded async work unit** (for example, one batch) for responsive
-    shutdowns and accurate work-unit metrics.
+    Must do **one bounded async work unit** (for example, one batch) for
+    responsive shutdowns and accurate work-unit metrics.
     """
 
     async def __call__(self) -> bool:

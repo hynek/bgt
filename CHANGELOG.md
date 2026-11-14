@@ -20,7 +20,7 @@ The third number identifies emergency releases from older branches.
 
 ### Added
 
-- `bgt.as_async_work_factory()` async adapter in support of async callables.
+- `bgt.as_async_work_factory()` adapter for async work units that don't require setup, cleanup, or control over the event loop.
   [#6](https://github.com/hynek/bgt/pull/6)
 
 

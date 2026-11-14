@@ -66,7 +66,7 @@ with bgt.SupervisedService.start(
 
 Return `True` from your work unit to be run again immediately.
 This keeps work units short, which makes shutdowns prompt.
-For async work units such as `async def do_work()` use `bgt.as_async_work_factory()` instead.
+For async work units such as `async def do_work()` use `bgt.as_async_work_factory()`.
 <!-- --8<-- [end:spiel] -->
 
 Check out our [step-by-step tutorial](https://bgt.hynek.me/stable/tutorial/) to get an instant feel for the features!
