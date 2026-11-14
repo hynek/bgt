@@ -542,17 +542,17 @@ class TestWorkFactory:
 
     def test_as_async_work_factory_wraps_the_async_callable(self):
         """
-        The wrapped factory wraps the async callable itself, yields a plain callable,
-        and hands out a fresh context manager per call.
+        The wrapped factory wraps the async callable itself, yields a plain
+        callable, and hands out a fresh context manager per call.
         """
         factory = as_async_work_factory(noop_async_work)
 
         with factory() as first, factory() as second:
-            assert inspect.unwrap(first) is noop_async_work
-            assert inspect.unwrap(second) is noop_async_work
+            assert noop_async_work is inspect.unwrap(first)
+            assert noop_async_work is inspect.unwrap(second)
 
-            assert first() is False
-            assert second() is False
+            assert False is first()
+            assert False is second()
 
     def test_sets_up_and_cleans_up_around_a_run(self):
         """
