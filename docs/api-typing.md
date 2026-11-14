@@ -6,4 +6,5 @@
         - Wakeup
         - Loop
         - DoWork
+        - DoAsyncWork
         - WorkFactory

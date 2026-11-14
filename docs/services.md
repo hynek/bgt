@@ -86,6 +86,35 @@ with bgt.SupervisedService.start(
 If you don't need any setup or cleanup work, you can use [`as_work_factory(do_work)`][bgt.as_work_factory] to wrap a plain callable into a no-op factory.
 
 
+### Async { #async }
+
+For async functions, use [`as_async_work_factory(do_work)`][bgt.as_async_work_factory] to wrap an async callable instead.
+It also creates and manages an [`asyncio.Runner`][] and event loop for you.
+
+If your async work needs setup or cleanup, write your own work factory and share one [`asyncio.Runner`][] between all three steps:
+
+```python
+async def do_async_work(client: AsyncClient) -> bool:
+    """
+    Crash-only async work unit code goes here.
+    """
+    ...
+
+
+@contextmanager
+def make_async_work() -> Generator[DoWork]:
+    with asyncio.Runner() as runner:
+        client = runner.run(AsyncClient.connect())
+        try:
+            yield lambda: runner.run(do_async_work(client))
+        finally:
+            runner.run(client.aclose())
+```
+
+Setup, work units, and cleanup run on the same event loop, so the client stays usable for the whole loop run.
+The event loop only runs inside `runner.run()`, so background tasks and timers do not run between work units.
+
+
 ## Lifecycle
 
 [`SupervisedService.stop()`][bgt.SupervisedService.stop] wakes the loop[^via], so a healthy service stops immediately after its current work unit finishes.

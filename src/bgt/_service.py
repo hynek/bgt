@@ -2,10 +2,13 @@
 Background service loops and the wakeup they wait on.
 """
 
+import asyncio
 import math
 import threading
 
-from contextlib import nullcontext
+from collections.abc import Callable, Generator
+from contextlib import contextmanager, nullcontext
+from functools import wraps
 from types import TracebackType
 from typing import Self
 
@@ -16,7 +19,7 @@ from prometheus_client import Gauge
 
 from ._supervisor import Supervisor
 from .exceptions import SuppressedCrashError
-from .typing import DoWork, Wakeup, WorkFactory
+from .typing import DoAsyncWork, DoWork, Wakeup, WorkFactory
 
 
 logger = structlog.stdlib.get_logger("bgt")
@@ -95,8 +98,68 @@ def as_work_factory(do_work: DoWork) -> WorkFactory:
 
     Returns:
         A factory that creates a context manager returning *do_work*.
+
+    !!! info "See also"
+        [`as_async_work_factory()`][bgt.as_async_work_factory] for
+        asynchronous callables.
     """
     return lambda: nullcontext(do_work)
+
+
+def as_async_work_factory(
+    do_async_work: DoAsyncWork,
+    *,
+    debug: bool | None = None,
+    loop_factory: Callable[[], asyncio.AbstractEventLoop] | None = None,
+) -> WorkFactory:
+    """
+    Wrap an async *do_async_work* callable into a
+    [`WorkFactory`][bgt.typing.WorkFactory] with no setup or cleanup.
+
+    !!! note
+        This is a lightweight helper for simple but common use cases.
+
+        As such:
+
+        - The work factory creates and owns the [`asyncio.Runner`][]
+          and its event loop.
+
+        - The event loop only runs during a work unit. Background tasks and
+          timers do not run between work units.
+
+        If you need more control over the event loop's or the runner's
+        lifecycle, create your own [`WorkFactory`][bgt.typing.WorkFactory]
+        implementation. It's only a handful of lines of
+        [code](services.md#async).
+
+    Args:
+        do_async_work: An async callable that performs one bounded work unit.
+
+        debug:
+            When true, the event loop will be run in debug mode. `None` means
+            asyncio's default.
+
+        loop_factory: When passed, it is used for new event loop creation.
+
+    Returns:
+        A factory that creates a context manager returning a plain callable
+            that runs one async work unit.
+
+    !!! info "See also"
+        [`as_work_factory()`][bgt.as_work_factory] for synchronous callables.
+    """
+
+    @contextmanager
+    def make_work() -> Generator[DoWork]:
+        with asyncio.Runner(debug=debug, loop_factory=loop_factory) as runner:
+
+            @wraps(do_async_work)
+            def do_work() -> bool:
+                return runner.run(do_async_work())
+
+            yield do_work
+
+    return make_work
 
 
 @attrs.define

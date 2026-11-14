@@ -76,6 +76,7 @@ work factory
 :   Makes a loop run's `do_work` and cleans up when the loop run ends.
     It is called at the start of every loop run, so setup is also recovery.
     [`as_work_factory`][bgt.as_work_factory] wraps a plain `do_work` that needs no setup.
+    [`as_async_work_factory`][bgt.as_async_work_factory] wraps an async `do_work` instead.
 
 
 ## Waking

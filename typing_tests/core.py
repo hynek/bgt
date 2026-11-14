@@ -9,17 +9,24 @@ from bgt import (
     Service,
     SupervisedService,
     Supervisor,
+    as_async_work_factory,
     as_work_factory,
 )
-from bgt.typing import DoWork, Loop, Wakeup, WorkFactory
+from bgt.typing import DoAsyncWork, DoWork, Loop, Wakeup, WorkFactory
 
 
 def process_orders() -> bool:
     return False
 
 
+async def process_orders_async() -> bool:
+    return False
+
+
 work: DoWork = process_orders
+async_work: DoAsyncWork = process_orders_async
 work_factory: WorkFactory = as_work_factory(work)
+async_work_factory: WorkFactory = as_async_work_factory(async_work)
 
 
 @contextmanager
