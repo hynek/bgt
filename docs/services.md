@@ -44,7 +44,7 @@ Alert on the restart rate and on the staleness of the gauges to catch chronic fa
 Only a `BaseException` that is not an `Exception`, such as `SystemExit` or `KeyboardInterrupt`, ends supervision for good.
 
 
-## Microreboots
+## Microreboots { #worker-factory }
 
 Since `Service` takes a *work factory* (a callable that makes a context manager that produces the work callable), you can use it for initialization and cleanup of your work unit's resources.
 And since you own the resources in your context manager, they survive for the whole lifetime of the loop run (importantly: *not* per work unit run).
@@ -85,6 +85,7 @@ with bgt.SupervisedService.start(
 
 If you don't need any setup or cleanup work, you can use [`as_work_factory(do_work)`][bgt.as_work_factory] to wrap a plain callable into a no-op factory.
 For async functions, use [`as_async_work_factory(do_work)`][bgt.as_async_work_factory] to wrap an async callable instead.
+It also creates and manages an [`asyncio.Runner`][] and event loop for you.
 
 
 ## Lifecycle
