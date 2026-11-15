@@ -13,6 +13,8 @@ edit_uri = "edit/main/docs/"
 
 # Trigger Read the Docs' search addon instead of Zensical's default.
 extra_javascript = ["assets/javascript/readthedocs.js"]
+# Custom fonts (Inter + Berkeley Mono).
+extra_css = ["assets/stylesheets/fonts.css"]
 
 nav = [
   { "Overview" = "index.md" },
@@ -27,6 +29,7 @@ nav = [
   { "Meta" = [
     { "License" = "https://github.com/hynek/bgt/blob/main/LICENSE" },
     { "Changelog" = "https://github.com/hynek/bgt/blob/main/CHANGELOG.md" },
+    { "Funding" = "https://hynek.me/say-thanks/" },
   ] },
 ]
 watch = ["README.md"]
