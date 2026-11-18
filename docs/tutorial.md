@@ -1,3 +1,7 @@
+---
+icon: material/rocket-launch
+---
+
 # Getting Started
 
 ## Installation

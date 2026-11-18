@@ -1,3 +1,7 @@
+---
+icon: material/api
+---
+
 # Types and Protocols
 
 ::: bgt.typing

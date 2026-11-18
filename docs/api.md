@@ -1,3 +1,7 @@
+---
+icon: material/api
+---
+
 # Core API
 
 ## Batteries-included

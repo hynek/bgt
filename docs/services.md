@@ -1,3 +1,7 @@
+---
+icon: material/autorenew
+---
+
 # Supervised Service Loops
 
 !!! abstract ""

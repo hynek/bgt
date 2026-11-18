@@ -1,3 +1,7 @@
+---
+icon: material/book-alphabet
+---
+
 # Glossary
 
 There's a lot of similar terms and proper nouns – let's try to untangle them!

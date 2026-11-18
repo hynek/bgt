@@ -1,3 +1,7 @@
+---
+icon: material/chart-line
+---
+
 # Observability
 
 Structured log events go to the `bgt` logger via [*structlog*](https://www.structlog.org).
