@@ -7,12 +7,20 @@ from typing import assert_type
 from bgt import (
     IntervalOnlyWakeup,
     Service,
+    StreamService,
     SupervisedService,
     Supervisor,
     as_async_work_factory,
     as_work_factory,
 )
-from bgt.typing import DoAsyncWork, DoWork, Loop, Wakeup, WorkFactory
+from bgt.typing import (
+    DoAsyncWork,
+    DoWork,
+    Loop,
+    Stream,
+    Wakeup,
+    WorkFactory,
+)
 
 
 def process_orders() -> bool:
@@ -104,3 +112,35 @@ with SupervisedService.start(
     make_work, name="stats", wakeup=IntervalOnlyWakeup()
 ) as plain_handle:
     assert_type(plain_handle, SupervisedService)
+
+
+def watch_orders(stop: threading.Event) -> Generator[None]:
+    yield
+
+
+# Any parameter name works, and items and return values are ignored.
+def watch_counts(event: threading.Event) -> Generator[int, None, str]:
+    yield 1
+    return "done"
+
+
+def watch_files(
+    *paths: str, stop_event: threading.Event | None = None
+) -> Generator[set[str]]:
+    yield set(paths)
+
+
+stream: Stream = watch_orders
+counting_stream: Stream = watch_counts
+
+stream_service = StreamService.build(stream, name="watcher")
+stream_loop: Loop = stream_service
+
+StreamService.build(
+    lambda stop: watch_files("/etc", stop_event=stop), name="files"
+)
+
+with SupervisedService.start_stream(
+    watch_counts, name="watcher", initial_backoff=0.1
+) as stream_handle:
+    assert_type(stream_handle, SupervisedService)

@@ -18,6 +18,22 @@ The third number identifies emergency releases from older branches.
 
 ## [Unreleased](https://github.com/hynek/bgt/compare/26.3.0...HEAD)
 
+### Added
+
+- `bgt.SupervisedService.start_stream()` that starts a `bgt.StreamService` for when you need to write the loop yourself, but still want a supervised background thread.
+
+  It runs a generator function and passes it a stop [`threading.Event`](https://docs.python.org/3/library/threading.html#threading.Event) that you can pass into other APIs (like [`watchfiles.watch()`](https://watchfiles.helpmanual.io/api/watch/)) – or check yourself.
+
+  Each `yield` counts as a completed [work unit](https://bgt.hynek.me/stable/glossary/#work).
+  Yield regularly, even when there is no work, because otherwise a quiet but healthy stream looks stuck.
+  [#8](https://github.com/hynek/bgt/pull/8)
+
+
+### Changed
+
+- If a custom loop returns while its stop event is unset, `bgt.Supervisor` now logs an error and restarts the loop.
+  Earlier versions stopped supervision.
+
 
 ## [26.3.0](https://github.com/hynek/bgt/compare/26.2.0...26.3.0) - 2026-11-14
 

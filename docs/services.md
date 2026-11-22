@@ -128,7 +128,7 @@ The event loop only runs inside `runner.run()`, so background tasks and timers d
 The supervisor can drive anything that satisfies the small [`Loop`][bgt.typing.Loop] protocol:
 `run(stop)`, `wake()`, `close()`, and a `has_completed_cycle` attribute.
 
-Within *bgt*, this chapter's [`Service`][bgt.Service] is the only `Loop`.
+Within *bgt*, [`Service`][bgt.Service] and [`StreamService`][bgt.StreamService] implement it.
 [*pgbg*](https://pgbg.hynek.me/) implements it for its leader-elected [`ElectedService`][pgbg.ElectedService] and, via an adapter, for its [`NotifyDispatcher`][pgbg.NotifyDispatcher].
 
 

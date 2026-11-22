@@ -15,7 +15,7 @@ crash-only software { #crash-only }
     With that, **initialization is recovery**.
     It's ["Have You Tried Turning It Off And On Again?"](https://www.youtube.com/watch?v=5UT8RkSmN4k) for applications.
 
-    In *bgt*, a supervised service can crash anytime, as long as its [work factory][bgt.typing.WorkFactory] knows how to initialize all necessary resources.
+    In *bgt*, a supervised service can crash anytime, as long as its [work factory][bgt.typing.WorkFactory] or *stream* knows how to initialize all necessary resources.
 
     The concept is closely related to the [*Let It Crash*](https://wiki.c2.com/?LetItCrash) philosophy in the – famously fault-tolerant – [Erlang](https://www.erlang.org) ecosystem.
     The term was coined by George Candea and Armando Fox in their [*Crash-Only Software*](https://www.usenix.org/conference/hotos-ix/crash-only-software) paper.
@@ -38,6 +38,10 @@ microreboot { #microreboot }
 service
 :   A background thread running a [`Service`][bgt.Service] in a *loop*.
 
+stream service
+:   A service running a [`StreamService`][bgt.StreamService] instead.
+    It doesn't wait on a *wakeup* or call `do_work`: its *stream* does both.
+
 worker
 :   The process that runs *bgt*'s threads and services.
 
@@ -52,6 +56,7 @@ loop cycle
 :   One pass through a loop's body: wait, then act.
 
     A service cycle waits for its wakeup and runs work units.
+    In a stream service, the stream does both, and each `yield` ends a cycle.
     A loop reports its progress through its [`has_completed_cycle`][bgt.typing.Loop.has_completed_cycle] attribute.
 
 loop run
@@ -71,10 +76,19 @@ work unit
 :   One call of `do_work`, time-bounded by contract.
     While `do_work` returns `True`, the next *work unit* runs back-to-back within the same loop cycle.
 
+    In a stream service, a work unit is everything between two `yield`s of its *stream*, including the stream's wait.
+    So a stream should yield regularly, even when there is no work.
+
 `do_work`
 :   The callable that performs one work unit per call.
     It's your code and the reason why *bgt* exists.
     Its signature is the [`DoWork`][bgt.typing.DoWork] protocol.
+
+stream
+:   The generator function that a stream service runs instead of `do_work`.
+    It gets the loop's stop event, waits on its own source, and yields once per work unit.
+    It is called at the start of every loop run, so – like in a work factory – setup is also recovery.
+    Its signature is the [`Stream`][bgt.typing.Stream] protocol.
 
 work factory
 :   Makes a loop run's `do_work` and cleans up when the loop run ends.
@@ -90,6 +104,7 @@ wakeup
     It can be anything that satisfies [`Wakeup`][bgt.typing.Wakeup].
     *bgt* ships [`IntervalOnlyWakeup`][bgt.IntervalOnlyWakeup], which has no external wake source.
     [*pgbg*](https://pgbg.hynek.me/)'s [`Subscription`][pgbg.Subscription] is one that fires on PostgreSQL `NOTIFY` events.
+    A stream service has neither a wakeup nor an *interval*: its stream waits on its own source.
 
 wake
 :   The pending signal that a wakeup's `wait()` consumes by returning `True`.
@@ -104,6 +119,7 @@ supervisor
 
 crash
 :   A loop run that ends with an exception.
+    The supervisor treats a loop run that returns without a *stop* the same way.
 
 backoff
 :   The exponentially growing delay between a crash and the next loop run.

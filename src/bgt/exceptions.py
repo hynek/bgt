@@ -3,6 +3,7 @@ class SuppressedCrashError(RuntimeError):
     A work factory's context manager swallowed the exception that ended a
     loop run.
 
-    This looks like a clean, silent stop to the supervisor which is almost
-    certainly undesired.
+    Without this exception, the loop run would return without a stop. The
+    supervisor would restart it, but the logs could not tell you why the run
+    ended.
     """

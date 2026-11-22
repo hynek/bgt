@@ -141,8 +141,6 @@ class Supervisor:
 
         try:
             while not self._stop_event.is_set():
-                crashed = False
-
                 try:
                     self._loop.run(self._stop_event)
                 except Exception:
@@ -155,12 +153,15 @@ class Supervisor:
                         )
                         break
 
-                    crashed = True
                     log.exception("supervisor.loop_crashed")
+                else:
+                    if self._stop_event.is_set():
+                        break
 
-                if not crashed:
-                    # A clean return means the stop event is set.
-                    break
+                    # The loop contract allows a clean return only once the
+                    # stop event is set. Treat anything else like a crash,
+                    # instead of silently ending supervision.
+                    log.error("supervisor.loop_returned_early")
 
                 if self._loop.has_completed_cycle:
                     # The loop run survived at least one full loop cycle, so
