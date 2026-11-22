@@ -115,6 +115,21 @@ You will find the built documentation in `site`.
       """
   ```
 
+- If you add or change public APIs, add a version note at the end of the docstring:
+
+  ```markdown
+  !!! version-added "Added in 26.4.0"
+
+  !!! version-changed "Changed in 26.4.0"
+      What changed.
+
+  !!! version-deprecated "Deprecated in 26.4.0"
+      What to use instead.
+  ```
+
+  We use [CalVer](https://calver.org/), so the next version is the current one with the middle number incremented (for example, `26.3.0` -> `26.4.0`).
+  The first release of a new year resets the middle number to 1 (for example, `27.1.0`).
+
 - We use [Ruff](https://ruff.rs/) to sort our imports and format our code with a line length of 79 characters.
   As long as you run our full *tox* suite before committing, you won't have to spend any time on formatting your code at all.
   If you don't, CI will catch it for you – but that seems like a waste of everyone's time!

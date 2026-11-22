@@ -22,6 +22,7 @@ You may check boxes that don't apply to your pull request to indicate that there
 - [ ] There's **tests** for all new and changed code.
 - [ ] **New APIs** are added to our typing tests at <https://github.com/hynek/bgt/blob/main/typing_tests/>.
 - [ ] Updated **documentation** for changed code.
+  - [ ] Added or changed public APIs have a `version-added`, `version-changed`, or `version-deprecated` [**version note**](https://github.com/hynek/bgt/blob/main/.github/CONTRIBUTING.md#code) at the end of their docstrings.
 - [ ] Documentation in `.md` files is written using [**semantic newlines**](https://rhodesmill.org/brandon/2012/one-sentence-per-line/).
 - [ ] Changes (and possible deprecations) are documented in the [**changelog**](https://github.com/hynek/bgt/blob/main/CHANGELOG.md).
 

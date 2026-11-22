@@ -147,6 +147,8 @@ def as_async_work_factory(
 
     !!! info "See also"
         [`as_work_factory()`][bgt.as_work_factory] for synchronous callables.
+
+    !!! version-added "Added in 26.3.0"
     """
 
     @contextmanager
