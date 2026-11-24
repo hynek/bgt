@@ -331,7 +331,6 @@ class StreamService:
 
     def watch_config(stop: threading.Event) -> Generator[None]:
         reload_config()
-        yield
 
         for changes in watchfiles.watch(
             CONFIG_DIR, stop_event=stop, yield_on_timeout=True
@@ -347,8 +346,12 @@ class StreamService:
 
     !!! tip
         - Changes that happen while the supervisor restarts the stream are
-          lost. Do a full sync and yield once at the start of each stream.
-          This also tells the supervisor that the loop run got going.
+          lost. Do a full sync at the start of each stream.
+
+        - Don't yield before your source runs. If the source can't start,
+          an early yield still counts as a completed work unit. Then the
+          supervisor resets its backoff and restarts the stream again and
+          again without a growing delay.
 
         - Yield regularly, also when there is no work. Otherwise, a quiet
           but healthy stream looks like one that never got going, and the
