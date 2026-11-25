@@ -17,9 +17,11 @@ class ScriptedLoop:
     A `Loop` whose runs follow a fixed script, one entry per run.
 
     "crash" raises before completing a cycle, "cycle" completes one and then
-    raises, "stop" requests the stop and returns cleanly, "stop_then_crash"
-    requests the stop and then raises, "exit" raises SystemExit, and "wait"
-    parks until someone else requests the stop.
+    raises, "stop" requests the stop and returns cleanly, "return" returns
+    without a stop request, "cycle_then_return" completes a cycle and then
+    returns without a stop request, "stop_then_crash" requests the stop and
+    then raises, "exit" raises SystemExit, and "wait" parks until someone else
+    requests the stop.
     """
 
     def __init__(self, script):
@@ -56,6 +58,10 @@ class ScriptedLoop:
                 raise GeneratorExit("base exception")
             case "stop":
                 stop.set()
+            case "return":
+                pass
+            case "cycle_then_return":
+                self.has_completed_cycle = True
             case "wait":
                 stop.wait(5)
             case _:
@@ -101,6 +107,61 @@ def test_restarts_the_loop_after_a_crash():
         "supervisor.restarting",
         "supervisor.stopped",
     ] == [ll["event"] for ll in logs]
+
+
+def test_restarts_a_loop_that_returns_without_a_stop():
+    """
+    A run that returns while no stop is requested breaks the `Loop` contract.
+    It is logged and restarted like a crash instead of silently ending
+    supervision.
+    """
+    loop = ScriptedLoop(["return", "stop"])
+    supervisor = Supervisor(name="test", loop=loop, initial_backoff=0)
+    restarts_before = SUPERVISOR_RESTARTS.labels(name="test")._value.get()
+
+    with structlog.testing.capture_logs() as logs:
+        supervisor._supervise()
+
+    assert (
+        restarts_before + 1
+        == SUPERVISOR_RESTARTS.labels(name="test")._value.get()
+    )
+    assert ["run", "wake", "run"] == loop.calls
+    assert [
+        "supervisor.started",
+        "supervisor.loop_returned_early",
+        "supervisor.restarting",
+        "supervisor.stopped",
+    ] == [entry["event"] for entry in logs]
+
+
+@pytest.mark.usefixtures("no_jitter")
+def test_early_returns_share_the_crash_backoff():
+    """
+    Early returns grow the backoff like crashes do, and one that follows a
+    completed cycle resets it.
+    """
+    supervisor = Supervisor(
+        name="test",
+        loop=ScriptedLoop(["return", "return", "cycle_then_return", "stop"]),
+        initial_backoff=0.01,
+    )
+
+    waits = []
+
+    def recording_wait(timeout=None):
+        """
+        Record each backoff instead of sleeping.
+        """
+        waits.append(timeout)
+        return False
+
+    supervisor._stop_event.wait = recording_wait
+
+    with structlog.testing.capture_logs():
+        supervisor._supervise()
+
+    assert [0.01, 0.02, 0.01] == waits
 
 
 def test_wakes_the_loop_before_a_crash_restart():

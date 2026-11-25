@@ -31,7 +31,7 @@ Common use cases include:
 
 - Periodic cleanup duties for expired caches or sessions.
 - Flushing buffered metrics or events.
-- Processing a continuous stream of data in bounded batches.
+- Processing a continuous stream of data in the background.
 
 ---
 

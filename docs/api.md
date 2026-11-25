@@ -29,6 +29,7 @@ You can also implement a [`Loop`][bgt.typing.Loop] of your own.
     options:
       members:
         - Service
+        - StreamService
         - Supervisor
 
 

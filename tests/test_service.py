@@ -11,6 +11,7 @@ from prometheus_client import REGISTRY
 from bgt import (
     IntervalOnlyWakeup,
     Service,
+    StreamService,
     SupervisedService,
     as_async_work_factory,
     as_work_factory,
@@ -31,6 +32,13 @@ async def noop_async_work():
     Do nothing and report no further work.
     """
     return False
+
+
+def noop_stream(stop):
+    """
+    End right away without yielding an item.
+    """
+    yield from ()
 
 
 class RecordingWakeup:
@@ -694,3 +702,188 @@ class TestWorkFactory:
 
         with pytest.raises(SuppressedCrashError):
             service.run(threading.Event())
+
+
+class TestStreamService:
+    def test_each_item_marks_progress_and_stamps_the_gauge(self):
+        """
+        A run starts without progress, and every yielded item marks progress
+        and stamps the last-work-unit gauge.
+        """
+        before = SERVICE_LAST_WORK_UNIT.labels(
+            name="stream-items"
+        )._value.get()
+        seen = []
+
+        def stream(stop):
+            """
+            Record the progress before and after the first item, then stop.
+            """
+            seen.append(service.has_completed_cycle)
+            yield
+            seen.append(service.has_completed_cycle)
+            stop.set()
+            yield
+
+        service = StreamService.build(stream, name="stream-items")
+        # Left over from an earlier run.
+        service.has_completed_cycle = True
+
+        service.run(threading.Event())
+
+        assert [False, True] == seen
+        assert (
+            before
+            < SERVICE_LAST_WORK_UNIT.labels(name="stream-items")._value.get()
+        )
+
+    def test_a_stop_ends_the_run_and_closes_the_stream(self):
+        """
+        Once the stop is set, the run ends after the current item and closes
+        the stream at once, so its cleanup does not wait for the garbage
+        collector.
+        """
+        source = iter([1, 2, 3])
+        streams = []
+
+        def items(stop):
+            """
+            Request the stop, then pass on the source's items.
+            """
+            stop.set()
+            yield from source
+
+        def stream(stop):
+            """
+            Keep a reference to the generator, to inspect its state later.
+            """
+            gen = items(stop)
+            streams.append(gen)
+
+            return gen
+
+        service = StreamService.build(stream, name="stream-stop")
+
+        with structlog.testing.capture_logs() as logs:
+            service.run(threading.Event())
+
+        assert [2, 3] == list(source)
+        assert inspect.GEN_CLOSED == inspect.getgeneratorstate(streams[0])
+        assert ["service.started", "service.stopped"] == [
+            entry["event"] for entry in logs
+        ]
+
+    def test_a_stream_that_ends_without_a_stop_returns(self):
+        """
+        A stream that ends on its own ends the run with a plain return and
+        does not claim a stop. The supervisor reports and restarts it.
+        """
+        service = StreamService.build(noop_stream, name="stream-ends")
+
+        with structlog.testing.capture_logs() as logs:
+            service.run(threading.Event())
+
+        assert not service.has_completed_cycle
+        assert ["service.started"] == [entry["event"] for entry in logs]
+
+    def test_crash_keeps_completed_progress(self):
+        """
+        A stream crash propagates, and the items before it still count as
+        progress, so the supervisor resets its backoff.
+        """
+
+        def stream(stop):
+            """
+            Yield one item, then crash.
+            """
+            yield
+            raise RuntimeError("stream crashed")
+
+        service = StreamService.build(stream, name="stream-crash")
+
+        with pytest.raises(RuntimeError, match="stream crashed"):
+            service.run(threading.Event())
+
+        assert service.has_completed_cycle
+
+    def test_crashing_from_birth_still_creates_the_last_work_unit_series(self):
+        """
+        The last-work-unit series exists from run start, so a staleness alert
+        never sits in no-data for a stream that cannot even start.
+        """
+
+        def stream(stop):
+            """
+            Fail before producing a stream at all.
+            """
+            raise RuntimeError("broken from birth")
+
+        service = StreamService.build(stream, name="stream-birth-crash")
+        # Left over from an earlier run.
+        service.has_completed_cycle = True
+
+        with pytest.raises(RuntimeError, match="broken from birth"):
+            service.run(threading.Event())
+
+        assert not service.has_completed_cycle
+        assert 0.0 == REGISTRY.get_sample_value(
+            "bgt_service_last_work_unit_timestamp_seconds",
+            {"name": "stream-birth-crash"},
+        )
+
+    def test_build_rejects_an_empty_name(self):
+        """
+        An empty name is rejected up front.
+        """
+        with pytest.raises(ValueError, match="name must not be empty"):
+            StreamService.build(noop_stream, name="")
+
+    def test_supervised_stream_is_one_handle(self):
+        """
+        start_stream() runs the stream under supervision, and the handle stops
+        it as a context manager.
+        """
+        ran = threading.Event()
+
+        def stream(stop):
+            """
+            Signal the first item, then block until the stop.
+            """
+            ran.set()
+            yield
+            stop.wait(5)
+
+        with SupervisedService.start_stream(
+            stream, name="stream-supervised", initial_backoff=0.01
+        ) as handle:
+            assert ran.wait(2)
+            assert handle.is_running
+
+        assert not handle.is_running
+
+    def test_supervised_stream_restarts_a_stream_that_ends_early(self):
+        """
+        A stream that ends without a stop is restarted, instead of silently
+        ending supervision.
+        """
+        runs = []
+        restarted = threading.Event()
+
+        def stream(stop):
+            """
+            End at once on the first run, then signal and block until the
+            stop.
+            """
+            runs.append(True)
+            if len(runs) == 1:
+                return
+
+            restarted.set()
+            yield
+            stop.wait(5)
+
+        with SupervisedService.start_stream(
+            stream, name="stream-ends-early", initial_backoff=0.01
+        ) as handle:
+            assert restarted.wait(2)
+            assert handle.is_running

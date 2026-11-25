@@ -109,6 +109,10 @@ docs = [
     "mkdocstrings-python",
     "zensical",
 ]
+# Third-party packages that docs/examples import, so type checkers see them.
+examples = [
+    "watchfiles",
+]
 mypy = [
     "mypy",
 ]
@@ -131,6 +135,7 @@ tox = [
 ]
 dev = [
     { include-group = "cov" },
+    { include-group = "examples" },
     { include-group = "mypy" },
     { include-group = "pyright" },
     { include-group = "ty" },

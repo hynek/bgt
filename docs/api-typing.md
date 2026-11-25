@@ -12,3 +12,4 @@ icon: material/api
         - DoWork
         - DoAsyncWork
         - WorkFactory
+        - Stream

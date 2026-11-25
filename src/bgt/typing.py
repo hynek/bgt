@@ -1,5 +1,6 @@
 import threading
 
+from collections.abc import Generator
 from contextlib import AbstractContextManager
 from typing import Protocol
 
@@ -73,6 +74,9 @@ class Loop(Protocol):
 
         Block until the stop event is set (a clean return) or something
         breaks (an exception the supervisor restarts after).
+
+        A return while the stop event is not set breaks this contract. The
+        supervisor logs it and restarts the loop as after a crash.
 
         **Must** set `has_completed_cycle` to `False` before any fallible work
         and True once a full loop cycle has completed. This way the supervisor
@@ -170,8 +174,7 @@ class WorkFactory(Protocol):
     The context manager must not suppress the loop run's exception: the
     service raises
     [`SuppressedCrashError`][bgt.exceptions.SuppressedCrashError] when it
-    does, because the supervisor would otherwise mistake the crash for a clean
-    stop.
+    does, so the supervisor restarts the loop and the logs name the cause.
 
     [`as_work_factory`][bgt.as_work_factory] wraps a plain
     [`DoWork`][bgt.typing.DoWork] callable that needs no setup or cleanup.
@@ -185,5 +188,39 @@ class WorkFactory(Protocol):
 
         Returns:
             A context manager that produces the work callable.
+        """
+        ...
+
+
+class Stream(Protocol):
+    """
+    Callable signature for a [`StreamService`][bgt.StreamService]'s work.
+
+    A stream waits on its own source (for example, file system events) and
+    ends once the stop event is set. Pass the stop event on to APIs that
+    accept one, like
+    [`watchfiles.watch()`](https://watchfiles.helpmanual.io/api/watch/)'s
+    *stop_event*.
+
+    Each yielded item marks one completed work unit. *bgt* ignores the items
+    themselves.
+
+    !!! version-added "Added in 26.4.0"
+    """
+
+    def __call__(
+        self, stop: threading.Event, /
+    ) -> Generator[object, None, object]:
+        """
+        Start the stream for one loop run.
+
+        Args:
+            stop:
+                The event that ends the stream. The stream must check it
+                while it waits, because *bgt* cannot interrupt the wait.
+
+        Returns:
+            A generator that yields once per completed work unit. *bgt*
+                closes it when it stops the run early.
         """
         ...

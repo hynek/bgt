@@ -7,7 +7,7 @@ import math
 import threading
 
 from collections.abc import Callable, Generator
-from contextlib import contextmanager, nullcontext
+from contextlib import closing, contextmanager, nullcontext
 from functools import wraps
 from types import TracebackType
 from typing import Self
@@ -19,7 +19,7 @@ from prometheus_client import Gauge
 
 from ._supervisor import Supervisor
 from .exceptions import SuppressedCrashError
-from .typing import DoAsyncWork, DoWork, Wakeup, WorkFactory
+from .typing import DoAsyncWork, DoWork, Loop, Stream, Wakeup, WorkFactory
 
 
 logger = structlog.stdlib.get_logger("bgt")
@@ -316,18 +316,143 @@ class Service:
                 return
 
 
+@attrs.define
+class StreamService:
+    """
+    Loop for a background service that needs to own the loop.
+
+    A stream service runs a [`Stream`][bgt.typing.Stream]: a generator that
+    waits on its own source and gets the supervisor's stop event. This fits
+    APIs that accept a stop event, like
+    [`watchfiles.watch()`](https://watchfiles.helpmanual.io/api/watch/):
+
+    ```python
+    import watchfiles
+
+    def watch_config(stop: threading.Event) -> Generator[None]:
+        reload_config()
+
+        for changes in watchfiles.watch(
+            CONFIG_DIR, stop_event=stop, yield_on_timeout=True
+        ):
+            if changes:
+                reload_config()
+            yield
+    ```
+
+    Each item that the stream yields marks one completed work unit. After
+    each item, the service checks the stop event. When it is set, the
+    service closes the stream and the loop run ends.
+
+    !!! tip
+        - Changes that happen while the supervisor restarts the stream are
+          lost. Do a full sync at the start of each stream.
+
+        - Don't yield before your source runs. If the source can't start,
+          an early yield still counts as a completed work unit. Then the
+          supervisor resets its backoff and restarts the stream again and
+          again without a growing delay.
+
+        - Yield regularly, also when there is no work. Otherwise, a quiet
+          but healthy stream looks like one that never got going, and the
+          last-work-unit metric goes stale. In the example,
+          *yield_on_timeout* does this.
+
+    Users must create it using [`build()`][bgt.StreamService.build].
+
+    !!! version-added "Added in 26.4.0"
+    """
+
+    _name: str = attrs.field(alias="name")
+    _stream: Stream = attrs.field(alias="stream")
+    has_completed_cycle: bool = attrs.field(init=False, default=False)
+
+    @classmethod
+    def build(cls, stream: Stream, *, name: str) -> Self:
+        """
+        Validate arguments and build a stream service, ready to be supervised.
+
+        Hand the result to [`Supervisor.start()`][bgt.Supervisor.start], to
+        run it supervised in a background thread.
+
+        Args:
+            stream:
+                Creates the generator for each loop run. See
+                [`Stream`][bgt.typing.Stream].
+
+            name:
+                Names the service in logs and metrics. Must not be empty.
+
+        Raises:
+            ValueError: If *name* is empty.
+        """
+        if not name:
+            msg = "name must not be empty"
+            raise ValueError(msg)
+
+        return cls(name=name, stream=stream)
+
+    def run(self, stop: threading.Event) -> None:
+        """
+        Run the stream until it ends or *stop* is set.
+
+        Any failure propagates. A stream that ends while *stop* is not set
+        ends the loop run with a plain return, which the supervisor restarts
+        like a crash.
+
+        Args:
+            stop:
+                The event the loop exits on. The stream gets it too.
+        """
+        self.has_completed_cycle = False
+        # Create the series at 0 without clobbering an earlier stamp.
+        SERVICE_LAST_WORK_UNIT.labels(name=self._name)
+        log = logger.bind(func="stream_service", name=self._name)
+        log.info("service.started")
+
+        # Close the stream explicitly, so its cleanup runs now on this thread
+        # and not whenever the garbage collector gets to it.
+        with closing(self._stream(stop)) as items:
+            for _ in items:
+                # Don't keep the ignored item alive while waiting for the
+                # next one.
+                del _
+
+                self.has_completed_cycle = True
+                SERVICE_LAST_WORK_UNIT.labels(
+                    name=self._name
+                ).set_to_current_time()
+
+                if stop.is_set():
+                    break
+
+        if stop.is_set():
+            log.info("service.stopped")
+
+    def wake(self) -> None:
+        """
+        Do nothing: the stream watches the stop event on its own.
+        """
+
+    def close(self) -> None:
+        """
+        Release nothing: each stream cleans up when its loop run ends.
+        """
+
+
 @attrs.frozen
 class SupervisedService:
     """
     Handle for a service that runs under supervision.
 
-    Construct via [`start()`][bgt.SupervisedService.start].
+    Construct via [`start()`][bgt.SupervisedService.start] or
+    [`start_stream()`][bgt.SupervisedService.start_stream].
 
     !!! info "See also"
         [Supervised Service Loops](services.md)
     """
 
-    _service: Service = attrs.field(alias="service")
+    _service: Loop = attrs.field(alias="service")
     _supervisor: Supervisor = attrs.field(alias="supervisor")
 
     @classmethod
@@ -356,6 +481,36 @@ class SupervisedService:
             wakeup=wakeup,
             interval=interval,
         )
+
+        return cls(
+            service=service,
+            supervisor=Supervisor.start(
+                service, name=name, initial_backoff=initial_backoff
+            ),
+        )
+
+    @classmethod
+    def start_stream(
+        cls,
+        stream: Stream,
+        *,
+        name: str,
+        initial_backoff: float = 0.1,
+    ) -> Self:
+        """
+        Build a stream service for *stream* and start running it under a
+        [`Supervisor`][bgt.Supervisor].
+
+        *name* names the service, the supervisor, its thread, and the restart
+        metric's label.
+
+        See [`StreamService.build()`][bgt.StreamService.build] for the
+        service arguments and [`Supervisor.start()`][bgt.Supervisor.start]
+        for *initial_backoff*.
+
+        !!! version-added "Added in 26.4.0"
+        """
+        service = StreamService.build(stream, name=name)
 
         return cls(
             service=service,
